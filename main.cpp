@@ -13,6 +13,8 @@ float calc_Y(float dX, Matrix<float>* coefficients, int posCounter);
 
 Matrix<float>* calcInterpolate(int numPoints, int subIntervalPoints, float xValues[], Matrix<float>* coefficients);
 
+void writeOutput(int points, Matrix<float>* M);
+
 int main() {
 	int numPoints;
 	cout << "Enter the number of points desired: ";
@@ -84,10 +86,11 @@ int main() {
 	cout << "Select from the menu:\n";
 	cout << "\t1. Enter the number of points in each interval.\n";
 	cout << "\t2. Enter the maximum error desired.\n";
+	cout << "\t3. Exit the program.\n";
 	cout << "Enter choice: ";
 	cin >> menuChoice;
 	
-	int subIntervalPoints = 10;
+	int subIntervalPoints = 1;
 	if (menuChoice == 1) {
 		cout << "Enter How many points in each interval (excluding boundaries): ";
 		cin >> subIntervalPoints;
@@ -95,75 +98,82 @@ int main() {
 		
 		auto interpolatedPoints = calcInterpolate(numPoints, subIntervalPoints, xValues, coefficients);
 		
+		writeOutput(numFinalCoordinates, interpolatedPoints);
+		
 		cout << "The Cubic Spline Interpolation calculation is done.\n";
-		
-		ofstream myFile;
-		myFile.open("Ali_CSI_Points.txt", std::ios::out);
-		for (int i = 0; i < numFinalCoordinates; i++) {
-			myFile << interpolatedPoints->getElement(0, i) << " " << interpolatedPoints->getElement(1, i) << '\n';
-		}
-		myFile.close();
-		
-		ofstream AML_File;
-		AML_File.open("Ali_CSI.aml", std::ios::out);
-		for (int i = 0; i < numFinalCoordinates; i++) {
-			AML_File << "PMOVE(" << interpolatedPoints->getElement(0, i) << ", "
-			         << interpolatedPoints->getElement(1, i)
-			         << ", 0, 0);\n";
-		}
-		AML_File.close();
 		
 	} else if (menuChoice == 2) {
 		float userError;
 		cout << "Enter the max error acceptable: ";
 		cin >> userError;
 		
-		int numFinalCoordinates;
-		int loopEnd = 0;
-		while (loopEnd < 10) {
-			numFinalCoordinates = subIntervalPoints*( numPoints - 1 ) + numPoints;
-			auto* interpolated_X = new float[numFinalCoordinates];
-			auto* interpolated_Y = new float[numFinalCoordinates];
-			float delta = hValue/( subIntervalPoints + 1 );
+		Matrix<float>* interpolatedPoints;
+		float max_error = -1;
+		while (max_error > userError or max_error == -1) {
+			int ptsPerSubSubInt = 200;
+			auto tempPoints = calcInterpolate(numPoints, subIntervalPoints, xValues, coefficients);
+			auto truePoints = calcInterpolate(numPoints,
+			                                  ptsPerSubSubInt*( subIntervalPoints + 1 ) + subIntervalPoints,
+			                                  xValues, coefficients);
 			
-			float inputX = xValues[0];
-			int posCounter = 0;
-			int subInterval = 0;
+			truePoints->printMatrix();
+			tempPoints->printMatrix();
 			
-			for (int i = 0; i < numFinalCoordinates; i++) {
-				float X_minus_Xi = inputX - xValues[posCounter];
-				interpolated_Y[i] = calc_Y(X_minus_Xi, coefficients, posCounter);
-				interpolated_X[i] = inputX;
+			
+			float true_error = 0;
+			for (int interval = 0, slopePos = 0, xPos = 0, posCounter = 0;
+			     interval < numPoints - 1; interval++) {                        // for each interval
+				auto subIntervalSlopes = new Matrix<float>(1, subIntervalPoints + 1);
 				
-				inputX += delta;
-				subInterval++;
+				for (int j = 0; j < subIntervalPoints + 1; j++, slopePos++) {
+					auto x1 = tempPoints->getElement(0, slopePos);
+					auto x2 = tempPoints->getElement(0, slopePos + 1);
+					auto y1 = tempPoints->getElement(1, slopePos);
+					auto y2 = tempPoints->getElement(1, slopePos + 1);
+					subIntervalSlopes->setElement(0, j, ( y2 - y1 )/( x2 - x1 ));
+				}
 				
-				if (subInterval > subIntervalPoints) {
-					posCounter++;
-					inputX = xValues[posCounter];
-					subInterval = 0;
+				for (int subInterval = 0;
+				     subInterval <
+				     subIntervalPoints + 1; subInterval++, xPos++) { // for each sub interval
+					auto slope = subIntervalSlopes->getElement(0, subInterval);
+					
+					float x_val = tempPoints->getElement(0, xPos);
+					float y_val = tempPoints->getElement(1, xPos);
+					
+					for (int subSubInt = 0; subSubInt < ptsPerSubSubInt + 1; subSubInt++, posCounter++) {
+						float delta = hValue*( subSubInt )/( ( subIntervalPoints + 1 )*( ptsPerSubSubInt + 1 ) );
+//						cout << "SubInt = " << posCounter << " delta = " << delta << endl;
+						float line_y = y_val + delta*slope;
+						if ( posCounter %6 != 0) {
+							float true_y = truePoints->getElement(1, posCounter);
+							float true_x = truePoints->getElement(0, posCounter);
+							cout << true_x << " " << line_y << " " << true_y << endl;
+//						true_error = std::max(std::abs(line_y - true_y), true_error);
+							float error = std::abs(line_y - true_y);
+							true_error = error > true_error ? error : true_error;
+						} else {
+//							posCounter--;
+						}
+//						if (posCounter%ptsPerSubSubInt == 0) {
+//							posCounter++;
+//						}
+					}
 				}
 			}
-			
-			loopEnd++;
+			max_error = true_error;
+//			max_error = max_error == -1 ? true_error : max_error;
+			if (max_error < userError) {
+//							int numFinalCoordinates = subIntervalPoints*( numPoints - 1 ) + numPoints;
+//							interpolatedPoints = new Matrix<float>(2, numFinalCoordinates);
+//							interpolatedPoints
+				cout << "IT TOOK THIS MANY SUBINTPOINTS TO MEET ERROR: " << subIntervalPoints << endl;
+			}
+			subIntervalPoints += 2;
 		}
 		
 		cout << "The Cubic Spline Interpolation calculation is done.\n";
-
-//		ofstream myFile;
-//		myFile.open("Ali_CSI_Points.txt", std::ios::out);
-//		for (int i = 0; i < numFinalCoordinates; i++) {
-//			myFile << interpolated_X[i] << " " << interpolated_Y[i] << '\n';
-//		}
-//		myFile.close();
-//
-//		ofstream AML_File;
-//		AML_File.open("Ali_CSI.aml", std::ios::out);
-//		for (int i = 0; i < numFinalCoordinates; i++) {
-//			AML_File << "PMOVE(" << interpolated_X[i] << ", " << interpolated_Y[i];
-//			AML_File << ", 0, 0);\n";
-//		}
-//		AML_File.close();
+		
 	}
 	
 	return EXIT_SUCCESS;
@@ -206,4 +216,22 @@ Matrix<float>* calcInterpolate(int numPoints, int subIntervalPoints, float xValu
 		}
 	}
 	return M;
+}
+
+void writeOutput(int points, Matrix<float>* M) {
+	ofstream myFile;
+	myFile.open("Ali_CSI_Points.txt", std::ios::out);
+	for (int i = 0; i < points; i++) {
+		myFile << M->getElement(0, i) << " " << M->getElement(1, i) << '\n';
+	}
+	myFile.close();
+	
+	ofstream AML_File;
+	AML_File.open("Ali_CSI.aml", std::ios::out);
+	for (int i = 0; i < points; i++) {
+		AML_File << "PMOVE(PT(" << M->getElement(0, i) << ", "
+		         << M->getElement(1, i)
+		         << ", 0, 0));" << endl;
+	}
+	AML_File.close();
 }
