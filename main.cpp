@@ -110,14 +110,14 @@ int main() {
 		Matrix<float>* interpolatedPoints;
 		float max_error = -1;
 		while (max_error > userError or max_error == -1) {
-			int ptsPerSubSubInt = 200;
+			int ptsPerSubSubInt = 50;
 			auto tempPoints = calcInterpolate(numPoints, subIntervalPoints, xValues, coefficients);
 			auto truePoints = calcInterpolate(numPoints,
 			                                  ptsPerSubSubInt*( subIntervalPoints + 1 ) + subIntervalPoints,
 			                                  xValues, coefficients);
-			
-			truePoints->printMatrix();
-			tempPoints->printMatrix();
+			int numFinalCoordinates = ptsPerSubSubInt*subIntervalPoints*( numPoints - 1 ) + numPoints;
+			// truePoints->printMatrix();
+			// tempPoints->printMatrix();
 			
 			
 			float true_error = 0;
@@ -132,6 +132,8 @@ int main() {
 					auto y2 = tempPoints->getElement(1, slopePos + 1);
 					subIntervalSlopes->setElement(0, j, ( y2 - y1 )/( x2 - x1 ));
 				}
+
+				// auto result = new Matrix<float>(2,)
 				
 				for (int subInterval = 0;
 				     subInterval <
@@ -145,13 +147,19 @@ int main() {
 						float delta = hValue*( subSubInt )/( ( subIntervalPoints + 1 )*( ptsPerSubSubInt + 1 ) );
 //						cout << "SubInt = " << posCounter << " delta = " << delta << endl;
 						float line_y = y_val + delta*slope;
-						if ( posCounter %6 != 0) {
+						if ( posCounter % ( subIntervalPoints + 1 )*( ptsPerSubSubInt + 1 ) != 0) {
 							float true_y = truePoints->getElement(1, posCounter);
 							float true_x = truePoints->getElement(0, posCounter);
-							cout << true_x << " " << line_y << " " << true_y << endl;
 //						true_error = std::max(std::abs(line_y - true_y), true_error);
 							float error = std::abs(line_y - true_y);
 							true_error = error > true_error ? error : true_error;
+							if (true_error < max_error) {
+								max_error = true_error;
+							}
+							// if (max_error != -1 or max_error < userError){
+								// cout << true_x << " " << line_y << " " << true_y << endl;
+								// writeOutput()
+							// }
 						} else {
 //							posCounter--;
 						}
@@ -161,6 +169,7 @@ int main() {
 					}
 				}
 			}
+			cout << "\n\nDONE HERE\n\n";
 			max_error = true_error;
 //			max_error = max_error == -1 ? true_error : max_error;
 			if (max_error < userError) {
