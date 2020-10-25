@@ -9,20 +9,22 @@
 #include "Matrix.h"
 #include "Invertible_Matrices.h"
 
+// prototypes:
+
+Matrix<float>* calcInterpolate(int numPts, int subPts, const float xValues[], Matrix<float>* coefficients);
+
 float calc_Y(float dX, Matrix<float>* coefficients, int posCounter);
 
-Matrix<float>*
-calcInterpolate(int numPts, int subPts, const float xValues[], Matrix<float>* coefficients);
-
 void writeOutput(int points, Matrix<float>* M);
+
 
 int main() {
 	int numPts;
 	cout << "Enter the number of points desired: ";
 	cin >> numPts;
 	
-	cout << "Enter the point coordinates in order, with each x and y value separated ";
-	cout << "with a space and each point coordinate separated with a space:\n";
+	cout << "Enter the point coordinates in order, with each x and y value separated "
+	     << "with a space and each point coordinate separated with a space:\n";
 	float xValues[numPts];
 	float yValues[numPts];
 	for (int i = 0; i < numPts; i++) {
@@ -95,7 +97,7 @@ int main() {
 	if (menuChoice == 1) {
 		cout << "Enter How many points in each interval (excluding boundaries): ";
 		cin >> subPts;
-		int numFinalPts = ( numPts - 1 )*( subPts + 1 ) + 1; // subPts*( numPts - 1 ) + numPts;
+		int numFinalPts = ( numPts - 1 )*( subPts + 1 ) + 1;
 		
 		auto interpolatedPts = calcInterpolate(numPts, subPts, xValues, coefficients);
 		
@@ -112,19 +114,20 @@ int main() {
 		
 		bool done = false;
 		while (!done) {
-			int subSubPts = 1000;
-			int subPtsEq = ( subSubPts + 1 )*( subPts + 1 ) - 1;
+			int subSubPts = 100; // how many intervals is each subinterval divided into to calculate the error
+			int subPtsEq = ( subSubPts + 1 )*( subPts + 1 ) - 1; // Subinterval points equivalent
 			auto tempPoints = calcInterpolate(numPts, subPts, xValues, coefficients);
 			auto truePoints = calcInterpolate(numPts, subPtsEq, xValues, coefficients);
-			int numFinalPts = ( numPts - 1 )*( subPtsEq + 1 ) + 1;
 			
+			int numFinalPts = ( numPts - 1 )*( subPtsEq + 1 ) + 1;
 			auto result = new Matrix<float>(3, numFinalPts);
 			
 			float true_error = 0;
-			int posCounter = 0;
-			for (int interval = 0, xPos = 0, slopePos = 0; interval < numPts - 1; interval++) {
+			for (int interval = 0, xPos = 0, slopePos = 0, posCounter = 0; interval < numPts - 1; interval++) {
+				// for each interval
 				
 				for (int subInt = 0; subInt < subPts + 1; subInt++, slopePos++, xPos++) {
+					// for each subinterval
 					auto x1 = tempPoints->getElement(0, slopePos);
 					auto x2 = tempPoints->getElement(0, slopePos + 1);
 					auto y1 = tempPoints->getElement(1, slopePos);
@@ -135,12 +138,12 @@ int main() {
 					float y_val = tempPoints->getElement(1, xPos);
 					
 					for (int subSubInt = 0; subSubInt < subSubPts + 1; subSubInt++, posCounter++) {
-//						float delta = hValue*( subSubInt )/( ( subPts + 1 )*( subSubPts + 1 ) );
+						// for each sub subinterval
 						float delta = hValue/( subPtsEq + 1 );
 						
-						float line_y = y_val + subSubInt*delta*slope;
-						float true_y = truePoints->getElement(1, posCounter);
 						float true_x = truePoints->getElement(0, posCounter);
+						float true_y = truePoints->getElement(1, posCounter);
+						float line_y = y_val + subSubInt*delta*slope;
 						
 						result->setElement(0, posCounter, true_x);
 						result->setElement(1, posCounter, line_y);
@@ -155,8 +158,8 @@ int main() {
 			
 			if (true_error < userError) {
 				done = true;
-				cout << "IT TOOK THIS MANY SUBINTPOINTS TO MEET ERROR: " << subPts << endl
-				     << "THE MAX ERROR WAS: " << true_error << endl;
+				cout << "SUBPOINTS REQ: " << subPts << endl
+				     << "MAX ERROR: " << true_error << endl;
 				
 				result->setElement(0, numFinalPts - 1, xValues[numPts - 1]);
 				result->setElement(1, numFinalPts - 1, yValues[numPts - 1]);
@@ -164,24 +167,16 @@ int main() {
 				
 				writeOutput(numFinalPts, result);
 			}
-			subPts += 20;
+			subPts += 2;
 		}
 		
 		cout << "The Cubic Spline Interpolation calculation is done.\n";
 		
 		return EXIT_SUCCESS;
+	} else {
+		cout << "Goodbye.\n";
+		return EXIT_SUCCESS;
 	}
-	
-	return EXIT_SUCCESS;
-}
-
-float calc_Y(float dX, Matrix<float>* coefficients, int posCounter) {
-	float y = 0;
-	y += coefficients->getElement(0, posCounter)*dX*dX*dX;
-	y += coefficients->getElement(1, posCounter)*dX*dX;
-	y += coefficients->getElement(2, posCounter)*dX;
-	y += coefficients->getElement(3, posCounter);
-	return y;
 }
 
 Matrix<float>*
@@ -213,6 +208,15 @@ calcInterpolate(int numPts, int subPts, const float xValues[], Matrix<float>* co
 		}
 	}
 	return M;
+}
+
+float calc_Y(float dX, Matrix<float>* coefficients, int posCounter) {
+	float y = 0;
+	y += coefficients->getElement(0, posCounter)*dX*dX*dX;
+	y += coefficients->getElement(1, posCounter)*dX*dX;
+	y += coefficients->getElement(2, posCounter)*dX;
+	y += coefficients->getElement(3, posCounter);
+	return y;
 }
 
 void writeOutput(int points, Matrix<float>* M) {

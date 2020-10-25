@@ -2,7 +2,7 @@
  * @file    Invertible_Matrices.h
  * @date    Created on 10/12/2020 at 12:58
  * @author  Ali Karimiafshar <Karimiafsharali@gmail.com>
- * @brief   
+ * @brief   Invertible Matrix, subclass of Matrix, header file.
  */
 
 #ifndef MATRIX_MULTIPLIER_INVERTIBLE_MATRICES_H
@@ -15,11 +15,11 @@ class InvertibleMatrix : public Matrix<int> {
   private:
 	const int MSIZE;
   public:
-	explicit InvertibleMatrix(const int msize);
+	explicit InvertibleMatrix(int msize);
 	virtual ~InvertibleMatrix() = default;
 
 	/**
- 	 * The code was copied form the internet to find the inverse of a matrix
+ 	 * The code was copied form the link below to find the inverse of a matrix
  	 * https://www.geeksforgeeks.org/adjoint-inverse-matrix/
  	 */
 

@@ -2,7 +2,7 @@
  * @file    Matrix.cpp
  * @date    Created on 10/7/2020 at 17:01
  * @author  Ali Karimiafshar <Karimiafsharali@gmail.com>
- * @brief   
+ * @brief   Matrix class implementation.
  */
 
 #include "Matrix.h"
@@ -72,6 +72,7 @@ void Matrix<Object>::printMatrix() {
 
 template <class Object>
 void Matrix<Object>::setValFromUser() {
+	cout << "Enter the matrix elements separated with a space: ";
 	for (int row = 0; row < rows; row++) {
 		for (int col = 0; col < cols; col++) {
 			Object tempVal;

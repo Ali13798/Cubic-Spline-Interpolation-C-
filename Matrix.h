@@ -2,7 +2,7 @@
  * @file    Matrix.h
  * @date    Created on 10/7/2020 at 17:01
  * @author  Ali Karimiafshar <Karimiafsharali@gmail.com>
- * @brief   
+ * @brief   The Matrix class header file.
  */
 
 #ifndef MATRIX_MULTIPLIER_MATRIX_H
