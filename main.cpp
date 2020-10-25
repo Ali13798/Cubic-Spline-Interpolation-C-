@@ -11,30 +11,31 @@
 
 float calc_Y(float dX, Matrix<float>* coefficients, int posCounter);
 
-Matrix<float>* calcInterpolate(int numPoints, int subIntervalPoints, float xValues[], Matrix<float>* coefficients);
+Matrix<float>*
+calcInterpolate(int numPts, int subPts, const float xValues[], Matrix<float>* coefficients);
 
 void writeOutput(int points, Matrix<float>* M);
 
 int main() {
-	int numPoints;
+	int numPts;
 	cout << "Enter the number of points desired: ";
-	cin >> numPoints;
+	cin >> numPts;
 	
 	cout << "Enter the point coordinates in order, with each x and y value separated ";
 	cout << "with a space and each point coordinate separated with a space:\n";
-	float xValues[numPoints];
-	float yValues[numPoints];
-	for (int i = 0; i < numPoints; i++) {
+	float xValues[numPts];
+	float yValues[numPts];
+	for (int i = 0; i < numPts; i++) {
 		cin >> xValues[i] >> yValues[i];
 	}
 	
 	cout << "\nThe points entered are:\n";
-	for (int i = 0; i < numPoints; i++) {
+	for (int i = 0; i < numPts; i++) {
 		cout << xValues[i] << ", " << yValues[i] << '\n';
 	}
 	
 	cout << "\nThe tridiagonal matrix is:\n";
-	int mSize = numPoints - 2;
+	int mSize = numPts - 2;
 	auto* tridiagonal = new InvertibleMatrix(mSize);
 	tridiagonal->setTridiagonal();
 	tridiagonal->printMatrix();
@@ -59,15 +60,15 @@ int main() {
 	theMMatrix.printMatrix();
 	
 	//// A, B, C, D, mValues
-	auto* coefficients = new Matrix<float>(5, numPoints);
+	auto* coefficients = new Matrix<float>(5, numPts);
 	
 	coefficients->setElement(4, 0, 0);
-	coefficients->setElement(4, numPoints - 1, 0);
-	for (int i = 1; i < numPoints - 1; i++) {
+	coefficients->setElement(4, numPts - 1, 0);
+	for (int i = 1; i < numPts - 1; i++) {
 		coefficients->setElement(4, i, theMMatrix.getElement(i - 1, 0));
 	}
 	
-	for (int i = 0; i < numPoints; i++) {
+	for (int i = 0; i < numPts; i++) {
 		float A_coeff = ( coefficients->getElement(4, i + 1) - coefficients->getElement(4, i) )/( 6*hValue );
 		coefficients->setElement(0, i, A_coeff);
 		
@@ -90,99 +91,85 @@ int main() {
 	cout << "Enter choice: ";
 	cin >> menuChoice;
 	
-	int subIntervalPoints = 1;
+	int subPts = 1;
 	if (menuChoice == 1) {
 		cout << "Enter How many points in each interval (excluding boundaries): ";
-		cin >> subIntervalPoints;
-		int numFinalCoordinates = subIntervalPoints*( numPoints - 1 ) + numPoints;
+		cin >> subPts;
+		int numFinalPts = ( numPts - 1 )*( subPts + 1 ) + 1; // subPts*( numPts - 1 ) + numPts;
 		
-		auto interpolatedPoints = calcInterpolate(numPoints, subIntervalPoints, xValues, coefficients);
+		auto interpolatedPts = calcInterpolate(numPts, subPts, xValues, coefficients);
 		
-		writeOutput(numFinalCoordinates, interpolatedPoints);
+		writeOutput(numFinalPts, interpolatedPts);
 		
 		cout << "The Cubic Spline Interpolation calculation is done.\n";
+		
+		return EXIT_SUCCESS;
 		
 	} else if (menuChoice == 2) {
 		float userError;
 		cout << "Enter the max error acceptable: ";
 		cin >> userError;
 		
-		Matrix<float>* interpolatedPoints;
-		float max_error = -1;
-		while (max_error > userError or max_error == -1) {
-			int ptsPerSubSubInt = 50;
-			auto tempPoints = calcInterpolate(numPoints, subIntervalPoints, xValues, coefficients);
-			auto truePoints = calcInterpolate(numPoints,
-			                                  ptsPerSubSubInt*( subIntervalPoints + 1 ) + subIntervalPoints,
-			                                  xValues, coefficients);
-			int numFinalCoordinates = ptsPerSubSubInt*subIntervalPoints*( numPoints - 1 ) + numPoints;
-			// truePoints->printMatrix();
-			// tempPoints->printMatrix();
+		bool done = false;
+		while (!done) {
+			int subSubPts = 1000;
+			int subPtsEq = ( subSubPts + 1 )*( subPts + 1 ) - 1;
+			auto tempPoints = calcInterpolate(numPts, subPts, xValues, coefficients);
+			auto truePoints = calcInterpolate(numPts, subPtsEq, xValues, coefficients);
+			int numFinalPts = ( numPts - 1 )*( subPtsEq + 1 ) + 1;
 			
+			auto result = new Matrix<float>(3, numFinalPts);
 			
 			float true_error = 0;
-			for (int interval = 0, slopePos = 0, xPos = 0, posCounter = 0;
-			     interval < numPoints - 1; interval++) {                        // for each interval
-				auto subIntervalSlopes = new Matrix<float>(1, subIntervalPoints + 1);
+			int posCounter = 0;
+			for (int interval = 0, xPos = 0, slopePos = 0; interval < numPts - 1; interval++) {
 				
-				for (int j = 0; j < subIntervalPoints + 1; j++, slopePos++) {
+				for (int subInt = 0; subInt < subPts + 1; subInt++, slopePos++, xPos++) {
 					auto x1 = tempPoints->getElement(0, slopePos);
 					auto x2 = tempPoints->getElement(0, slopePos + 1);
 					auto y1 = tempPoints->getElement(1, slopePos);
 					auto y2 = tempPoints->getElement(1, slopePos + 1);
-					subIntervalSlopes->setElement(0, j, ( y2 - y1 )/( x2 - x1 ));
-				}
-
-				// auto result = new Matrix<float>(2,)
-				
-				for (int subInterval = 0;
-				     subInterval <
-				     subIntervalPoints + 1; subInterval++, xPos++) { // for each sub interval
-					auto slope = subIntervalSlopes->getElement(0, subInterval);
+					auto slope = ( y2 - y1 )/( x2 - x1 );
 					
 					float x_val = tempPoints->getElement(0, xPos);
 					float y_val = tempPoints->getElement(1, xPos);
 					
-					for (int subSubInt = 0; subSubInt < ptsPerSubSubInt + 1; subSubInt++, posCounter++) {
-						float delta = hValue*( subSubInt )/( ( subIntervalPoints + 1 )*( ptsPerSubSubInt + 1 ) );
-//						cout << "SubInt = " << posCounter << " delta = " << delta << endl;
-						float line_y = y_val + delta*slope;
-						if ( posCounter % ( subIntervalPoints + 1 )*( ptsPerSubSubInt + 1 ) != 0) {
-							float true_y = truePoints->getElement(1, posCounter);
-							float true_x = truePoints->getElement(0, posCounter);
-//						true_error = std::max(std::abs(line_y - true_y), true_error);
-							float error = std::abs(line_y - true_y);
-							true_error = error > true_error ? error : true_error;
-							if (true_error < max_error) {
-								max_error = true_error;
-							}
-							// if (max_error != -1 or max_error < userError){
-								// cout << true_x << " " << line_y << " " << true_y << endl;
-								// writeOutput()
-							// }
-						} else {
-//							posCounter--;
-						}
-//						if (posCounter%ptsPerSubSubInt == 0) {
-//							posCounter++;
-//						}
+					for (int subSubInt = 0; subSubInt < subSubPts + 1; subSubInt++, posCounter++) {
+//						float delta = hValue*( subSubInt )/( ( subPts + 1 )*( subSubPts + 1 ) );
+						float delta = hValue/( subPtsEq + 1 );
+						
+						float line_y = y_val + subSubInt*delta*slope;
+						float true_y = truePoints->getElement(1, posCounter);
+						float true_x = truePoints->getElement(0, posCounter);
+						
+						result->setElement(0, posCounter, true_x);
+						result->setElement(1, posCounter, line_y);
+						result->setElement(2, posCounter, true_y);
+						
+						float error = std::abs(line_y - true_y);
+						true_error = std::max(error, true_error);
+						
 					}
 				}
 			}
-			cout << "\n\nDONE HERE\n\n";
-			max_error = true_error;
-//			max_error = max_error == -1 ? true_error : max_error;
-			if (max_error < userError) {
-//							int numFinalCoordinates = subIntervalPoints*( numPoints - 1 ) + numPoints;
-//							interpolatedPoints = new Matrix<float>(2, numFinalCoordinates);
-//							interpolatedPoints
-				cout << "IT TOOK THIS MANY SUBINTPOINTS TO MEET ERROR: " << subIntervalPoints << endl;
+			
+			if (true_error < userError) {
+				done = true;
+				cout << "IT TOOK THIS MANY SUBINTPOINTS TO MEET ERROR: " << subPts << endl
+				     << "THE MAX ERROR WAS: " << true_error << endl;
+				
+				result->setElement(0, numFinalPts - 1, xValues[numPts - 1]);
+				result->setElement(1, numFinalPts - 1, yValues[numPts - 1]);
+				result->setElement(2, numFinalPts - 1, yValues[numPts - 1]);
+				
+				writeOutput(numFinalPts, result);
 			}
-			subIntervalPoints += 2;
+			subPts += 20;
 		}
 		
 		cout << "The Cubic Spline Interpolation calculation is done.\n";
 		
+		return EXIT_SUCCESS;
 	}
 	
 	return EXIT_SUCCESS;
@@ -197,18 +184,19 @@ float calc_Y(float dX, Matrix<float>* coefficients, int posCounter) {
 	return y;
 }
 
-Matrix<float>* calcInterpolate(int numPoints, int subIntervalPoints, float xValues[], Matrix<float>* coefficients) {
-	int numFinalCoordinates = subIntervalPoints*( numPoints - 1 ) + numPoints;
-	auto M = new Matrix<float>(2, numFinalCoordinates);
+Matrix<float>*
+calcInterpolate(int numPts, int subPts, const float xValues[], Matrix<float>* coefficients) {
+	int numFinalPts = ( numPts - 1 )*( subPts + 1 ) + 1;
+	auto M = new Matrix<float>(2, numFinalPts);
 	
 	float hValue = xValues[1] - xValues[0];
-	float delta = hValue/( subIntervalPoints + 1 );
+	float delta = hValue/( subPts + 1 );
 	
 	float inputX = xValues[0];
 	int posCounter = 0;
 	int subInterval = 0;
 	
-	for (int i = 0; i < numFinalCoordinates; i++) {
+	for (int i = 0; i < numFinalPts; i++) {
 		float X_minus_Xi = inputX - xValues[posCounter];
 		auto y = calc_Y(X_minus_Xi, coefficients, posCounter);
 		
@@ -218,7 +206,7 @@ Matrix<float>* calcInterpolate(int numPoints, int subIntervalPoints, float xValu
 		inputX += delta;
 		subInterval++;
 		
-		if (subInterval > subIntervalPoints) {
+		if (subInterval > subPts) {
 			posCounter++;
 			inputX = xValues[posCounter];
 			subInterval = 0;
